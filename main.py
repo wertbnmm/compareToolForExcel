@@ -1,3 +1,4 @@
+import sys
 from tkinter import filedialog
 import customtkinter as ctk
 import pandas as pd
@@ -5,6 +6,7 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 # 導入你寫好的 comparelist 模組
 import comparelist
+from resultExport import export_records_report
 
 # 設定外觀主題
 ctk.set_appearance_mode("System")
@@ -17,7 +19,22 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     super().__init__()
     self.TkdndVersion = TkinterDnD._require(self)
 
+# --- 新增：用來攔截 print 並寫入介面 Textbox 的輔助類別 ---
+class TextRedirector:
 
+  def __init__(self, text_widget):
+    self.text_widget = text_widget
+
+  def write(self, str_text):
+    self.text_widget.configure(state="normal")  # 允許寫入
+    self.text_widget.insert("end", str_text)  # 插入文字
+    self.text_widget.see("end")  # 自動捲動到最底部
+    self.text_widget.configure(state="disabled")  # 設為唯讀防手殘修改
+    self.text_widget.update_idletasks()
+
+  def flush(self):
+    pass  # 為了相容檔案串流介面，保留空方法
+  
 class ExcelComparatorApp(App):
 
   def __init__(self):
@@ -153,6 +170,19 @@ class ExcelComparatorApp(App):
     )
     self.btn_run.pack(pady=15)
 
+    # --- 即時 Console 輸出視窗 (CTkTextbox) ---
+    self.console_box = ctk.CTkTextbox(
+        self,
+        height=150,
+        corner_radius=6,
+        font=("Consolas", 10),
+    )
+    self.console_box.pack(fill="x", padx=20, pady=(0, 10))
+    self.console_box.configure(state="disabled")
+
+    sys.stdout = TextRedirector(self.console_box)
+    print("✨ 系統初始化完成，隨時可以開始比對！\n")
+
   def select_old_file(self):
     path = filedialog.askopenfilename(
         title="選擇舊專案檔案", filetypes=[("Excel files", "*.xls *.xlsx")]
@@ -204,6 +234,8 @@ class ExcelComparatorApp(App):
       if compare_func:
         print(f"正在執行比對模式：{selected_method_name}")
         result, old_missing, new_missing = compare_func(self.old_file_path, self.new_file_path)
+        export_records_report(old_missing, title="SAP625 匯入資料清單", filename="SAP625_mismatch")
+        export_records_report(new_missing, title="SAN070R1 匯入資料清單", filename="SAN070R1_mismatch")
         print(result)
       else:
         print(f"錯誤：找不到對應的比對方法 '{selected_method_name}'")
