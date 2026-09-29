@@ -1,38 +1,49 @@
+"""比對結果匯出模組：將資料清單轉換為 Markdown 報表並寫入檔案。"""
 from datetime import datetime
 import os
+from typing import Any, Dict, List
 
-def records_to_markdown(records: list[dict], title: str) -> str:
-    """將字典清單轉換為 Markdown 表格，並自動將日期轉換為 yyyy/mm/dd 附加在標題後方"""
-    if not records:
-        return f"### {title}\n\n（無資料）\n"
-    
-    # 1. 自動從第一筆資料抓取 start_date (例如 '20240101') 轉成 '2024/01/01'
-    raw_date = records[0].get('start_date', '')
-    date_suffix = ""
-    if len(raw_date) == 8:
-        date_suffix = f" ({raw_date[:4]}/{raw_date[4:6]}/{raw_date[6:]})"
-    
-    full_title = f"{title}{date_suffix}"
-    
-    # 2. 從字典的 key 動態取得所有欄位名稱
-    columns = list(records[0].keys())
-    
-    # 3. 組合表頭與分隔線
-    header = "| " + " | ".join(columns) + " |"
-    separator = "| " + " | ".join(["---"] * len(columns)) + " |"
-    
-    # 4. 組合每一列的資料
-    rows = []
-    for r in records:
-        row_values = [str(r.get(col, "")).replace("\n", " ") for col in columns]
-        rows.append("| " + " | ".join(row_values) + " |")
-        
-    # 5. 組裝成完整的 Markdown 格式
-    md_table = f"### {full_title}\n" + "\n".join([header, separator] + rows) + "\n"
-    return md_table
+import pandas as pd
 
+def records_to_markdown(records, title: str) -> str:
+  """將字典清單或 DataFrame 轉換為 Markdown 表格"""
+  # 💡 新增這段：如果傳進來的是 Pandas DataFrame，先轉成字典清單
+  if isinstance(records, pd.DataFrame):
+    if records.empty:
+      return f"### {title}\n\n（無資料）\n"
+    records = records.to_dict(orient="records")
 
-def export_records_report(records: list[dict], title: str, filename: str = "import_result.md"):
+  if not records:
+    return f"### {title}\n\n（無資料）\n"
+
+  # 1. 自動從第一筆資料抓取 start_date (例如 '20240101') 轉成 '2024/01/01'
+  raw_date = records[0].get("start_date", "")
+  date_suffix = ""
+  if len(str(raw_date)) == 8:
+    date_suffix = f" ({raw_date[:4]}/{raw_date[4:6]}/{raw_date[6:]})"
+
+  full_title = f"{title}{date_suffix}"
+
+  # 2. 從字典的 key 動態取得所有欄位名稱
+  columns = list(records[0].keys())
+
+  # 3. 組合表頭與分隔線
+  header = "| " + " | ".join(columns) + " |"
+  separator = "| " + " | ".join(["---"] * len(columns)) + " |"
+
+  # 4. 組合每一列的資料
+  rows = []
+  for r in records:
+    row_values = [str(r.get(col, "")).replace("\n", " ") for col in columns]
+    rows.append("| " + " | ".join(row_values) + " |")
+
+  # 5. 組裝成完整的 Markdown 格式
+  md_table = f"### {full_title}\n" + "\n".join([header, separator] + rows) + "\n"
+  return md_table
+
+def export_records_report(
+    records: List[Dict[str, Any]], title: str, filename: str = "import_result.md"
+) -> None:
     """接收資料清單，自動建立 compareResult 資料夾並匯出為 Markdown 檔案，檔名會自動附加 yyyyMMddHHmmss"""
     output_dir = "compareResult"
     
@@ -52,7 +63,7 @@ def export_records_report(records: list[dict], title: str, filename: str = "impo
     md_content = records_to_markdown(records, title=title)
     
     # 4. 寫入檔案
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(file_path, "w", encoding="utf-8-sig") as f:
         f.write(f"# 資料匯入報表\n\n")
         f.write(md_content)
         

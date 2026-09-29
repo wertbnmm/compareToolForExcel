@@ -1,5 +1,12 @@
+"""Excel 智慧比對工具 - CustomTkinter 圖形介面主程式。
+
+負責使用者互動（拖曳/選擇檔案、選擇比對模式、顯示執行結果），
+實際的比對邏輯委派給 comparelist / compare 模組，匯出報表則交給 resultExport 模組。
+"""
 import sys
 from tkinter import filedialog
+from typing import Any, Callable, Dict, Optional
+
 import customtkinter as ctk
 import pandas as pd
 from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -21,18 +28,19 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
 # --- 新增：用來攔截 print 並寫入介面 Textbox 的輔助類別 ---
 class TextRedirector:
+  """將 print() 輸出導向 CTkTextbox，讓 Console 訊息顯示在圖形介面上。"""
 
-  def __init__(self, text_widget):
+  def __init__(self, text_widget: ctk.CTkTextbox) -> None:
     self.text_widget = text_widget
 
-  def write(self, str_text):
+  def write(self, str_text: str) -> None:
     self.text_widget.configure(state="normal")  # 允許寫入
     self.text_widget.insert("end", str_text)  # 插入文字
     self.text_widget.see("end")  # 自動捲動到最底部
     self.text_widget.configure(state="disabled")  # 設為唯讀防手殘修改
     self.text_widget.update_idletasks()
 
-  def flush(self):
+  def flush(self) -> None:
     pass  # 為了相容檔案串流介面，保留空方法
   
 class ExcelComparatorApp(App):
@@ -44,8 +52,8 @@ class ExcelComparatorApp(App):
     self.geometry("540x520")
     self.resizable(False, False)
 
-    self.old_file_path = None
-    self.new_file_path = None
+    self.old_file_path: Optional[str] = None
+    self.new_file_path: Optional[str] = None
 
     # 主標題
     self.title_label = ctk.CTkLabel(
@@ -138,7 +146,7 @@ class ExcelComparatorApp(App):
     self.lbl_method.grid(row=0, column=0, sticky="ew", padx=(20, 10), pady=15)
 
     # 取得 comparelist 裡面的方法字典
-    self.methods_dict = comparelist.get_comparison_methods()
+    self.methods_dict: Dict[str, Callable] = comparelist.get_comparison_methods()
     method_names = (
         list(self.methods_dict.keys())
         if self.methods_dict
@@ -183,45 +191,52 @@ class ExcelComparatorApp(App):
     sys.stdout = TextRedirector(self.console_box)
     print("✨ 系統初始化完成，隨時可以開始比對！\n")
 
-  def select_old_file(self):
+  def select_old_file(self) -> None:
+    """透過檔案選擇對話框載入舊專案 Excel。"""
     path = filedialog.askopenfilename(
         title="選擇舊專案檔案", filetypes=[("Excel files", "*.xls *.xlsx")]
     )
     if path:
       self.set_old_file(path)
 
-  def select_new_file(self):
+  def select_new_file(self) -> None:
+    """透過檔案選擇對話框載入新專案 Excel。"""
     path = filedialog.askopenfilename(
         title="選擇新專案檔案", filetypes=[("Excel files", "*.xlsx")]
     )
     if path:
       self.set_new_file(path)
 
-  def drop_old_file(self, event):
+  def drop_old_file(self, event: Any) -> None:
+    """處理拖曳檔案至「舊專案」拖曳區的事件。"""
     path = event.data.strip("{}")
     if path.endswith((".xls", ".xlsx")):
       self.set_old_file(path)
 
-  def drop_new_file(self, event):
+  def drop_new_file(self, event: Any) -> None:
+    """處理拖曳檔案至「新專案」拖曳區的事件。"""
     path = event.data.strip("{}")
     if path.endswith(".xlsx"):
       self.set_new_file(path)
 
-  def set_old_file(self, path):
+  def set_old_file(self, path: str) -> None:
+    """記錄舊專案檔案路徑，並更新畫面上的提示標籤。"""
     self.old_file_path = path
     filename = path.split("/")[-1].split("\\")[-1]
     self.lbl_old.configure(
         text=f"✅ 已載入舊專案：\n{filename}", text_color="#2b8a3e"
     )
 
-  def set_new_file(self, path):
+  def set_new_file(self, path: str) -> None:
+    """記錄新專案檔案路徑，並更新畫面上的提示標籤。"""
     self.new_file_path = path
     filename = path.split("/")[-1].split("\\")[-1]
     self.lbl_new.configure(
         text=f"✅ 已載入新專案：\n{filename}", text_color="#2b8a3e"
     )
 
-  def run_comparison(self):
+  def run_comparison(self) -> None:
+    """依照目前選定的比對模式執行比對，並將差異資料匯出成 Markdown 報表。"""
     if not self.old_file_path or not self.new_file_path:
       print("請先完整選擇舊專案與新專案檔案！")
       return
@@ -233,9 +248,7 @@ class ExcelComparatorApp(App):
       compare_func = self.methods_dict.get(selected_method_name)
       if compare_func:
         print(f"正在執行比對模式：{selected_method_name}")
-        result, old_missing, new_missing = compare_func(self.old_file_path, self.new_file_path)
-        export_records_report(old_missing, title="SAP625 匯入資料清單", filename="SAP625_mismatch")
-        export_records_report(new_missing, title="SAN070R1 匯入資料清單", filename="SAN070R1_mismatch")
+        result = compare_func(self.old_file_path, self.new_file_path)
         print(result)
       else:
         print(f"錯誤：找不到對應的比對方法 '{selected_method_name}'")

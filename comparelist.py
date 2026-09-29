@@ -1,15 +1,17 @@
-from dataclasses import dataclass
 import glob
 import importlib
 import os
-from typing import Any
+from typing import Callable, Dict
 
-from altair import Dict
-from narwhals import List
 
-def get_comparison_methods():
-  """自動掃描 compare 資料夾，讀取每個模組的 RULE_NAME 與 compare 方法"""
-  methods = {}
+def get_comparison_methods() -> Dict[str, Callable]:
+  """自動掃描 compare 資料夾，讀取每個模組的 RULE_NAME 與 compare 方法。
+
+  Returns:
+    以「顯示名稱」為 key、對應比對函式 (compare) 為 value 的字典，
+    可直接提供給 UI 下拉選單使用。
+  """
+  methods: Dict[str, Callable] = {}
 
   current_dir = os.path.dirname(__file__)
   compare_dir = os.path.join(current_dir, "compare")

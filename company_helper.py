@@ -1,4 +1,6 @@
 # 公司的對照資料庫
+from typing import Optional
+
 COMPANY_MAPPING = {
     "HA": {
         "short_name": "和泰器材",
@@ -19,7 +21,7 @@ COMPANY_MAPPING = {
 }
 
 
-def get_company_id(name_input: str) -> str:
+def get_company_id(name_input: str) -> Optional[str]:
   """根據輸入的公司名稱（簡稱或全銜），回傳對應的 Company ID (例如: 'HD')
 
   如果找不到則回傳 None。
