@@ -17,6 +17,7 @@ a = Analysis(
         # 將 compare 資料夾及其內部的比對模組宣告進來
         'compare',
         'compare.SAP625_SAN070R1',
+        'compare.SAP162_SAN080R1',
         # 確保 GUI 拖放外掛正常運作
         'tkinterdnd2',
     ],

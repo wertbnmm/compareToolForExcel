@@ -99,7 +99,8 @@ def read_all_sheets_raw(file_path: str) -> Dict[str, pd.DataFrame]:
   Raises:
     ValueError: 當檔案內容為空或無法讀取任何工作表時拋出。
   """
-  all_sheets_raw = pd.read_excel(file_path, sheet_name=None, header=None)
+  read_options = {"engine": "xlrd"} if str(file_path).lower().endswith(".xls") else {}
+  all_sheets_raw = pd.read_excel(file_path, sheet_name=None, header=None, **read_options)
   if not all_sheets_raw:
     raise ValueError("錯誤：Excel 檔案內容為空或無法讀取。")
   return all_sheets_raw
@@ -133,7 +134,9 @@ def validate_sheet_structure(
 
   for field in fields:
     cell_value = get_cell_value(df_raw, field.x, field.y)
-    if field.col_name not in cell_value:
+    normalized_cell_value = re.sub(r"\s+", "", cell_value)
+    normalized_col_name = re.sub(r"\s+", "", field.col_name)
+    if normalized_col_name not in normalized_cell_value:
       raise ValueError(
           f"工作表【{sheet_name}】結構錯誤（座標 x={field.x}, y={field.y} 的內容"
           f" '{cell_value}' 不包含必要的標籤/欄位 '{field.col_name}'）。"
@@ -151,5 +154,8 @@ def read_data_table(file_path: str, sheet_name: str, header_row: int) -> pd.Data
   Returns:
     已清除全空列、所有欄位皆以字串型態讀入的資料表格 DataFrame。
   """
-  df_table = pd.read_excel(file_path, sheet_name=sheet_name, header=header_row, dtype=str)
+  read_options = {"engine": "xlrd"} if str(file_path).lower().endswith(".xls") else {}
+  df_table = pd.read_excel(
+      file_path, sheet_name=sheet_name, header=header_row, dtype=str, **read_options
+  )
   return df_table.dropna(how="all")
