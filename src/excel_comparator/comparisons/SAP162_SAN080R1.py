@@ -6,6 +6,7 @@
   3. 於差異報表結尾固定加入「總數」列，並匯出為 Markdown 報表。
 """
 from dataclasses import dataclass
+import os
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
@@ -26,6 +27,17 @@ from excel_comparator.shared.excel_utils import (
 # 🌟 介面下拉選單中的名稱
 RULE_NAME = "SAP162/SAN080R1撤票收回金額比對"
 user_service = UserService()
+_user_service_environment = os.getenv("EXCEL_COMPARATOR_ENV", "").strip().upper()
+
+
+def _get_user_service() -> UserService:
+  global user_service, _user_service_environment
+
+  environment = os.getenv("EXCEL_COMPARATOR_ENV", "").strip().upper()
+  if environment != _user_service_environment:
+    user_service = UserService()
+    _user_service_environment = environment
+  return user_service
 
 
 @dataclass
@@ -155,7 +167,7 @@ def process_Old(file_path: str) -> List[DealerRecord]:
 def _query_employee_id_map(names: List[str], compid: str) -> Dict[str, str]:
   """一次依新系統業務員名稱與公司別查回 empno 對照表。"""
   print(f"--- 查詢新系統業務員：公司 {compid}，共 {len(names)} 人 ---")
-  users = user_service.query_user_info_tsql(
+  users = _get_user_service().query_user_info_tsql(
       UserQueryRequest(compid=compid, multiple_name=sorted(set(names)))
   )
   employee_ids: Dict[str, str] = {}

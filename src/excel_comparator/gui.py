@@ -13,6 +13,9 @@ sys.dont_write_bytecode = True
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
+if os.environ.get("EXCEL_COMPARATOR_ENV", "").upper() not in {"SIT", "UAT"}:
+  os.environ["EXCEL_COMPARATOR_ENV"] = "SIT"
+
 from excel_comparator.application import comparison_registry
 from excel_comparator.shared.report_export import get_output_dir
 
@@ -48,7 +51,7 @@ class ExcelComparatorApp(App):
     super().__init__()
 
     self.title("Excel 智慧比對工具 (支援拖曳)")
-    self.geometry("540x520")
+    self.geometry("540x560")
     self.resizable(False, False)
 
     self.old_file_path: Optional[str] = None
@@ -128,7 +131,7 @@ class ExcelComparatorApp(App):
 
     # --- 比對方法選擇區 (下拉選單) ---
     self.frame_method = ctk.CTkFrame(
-        self, fg_color=("#e9ecef", "#2b2b2b"), height=65, corner_radius=10
+        self, fg_color=("#e9ecef", "#2b2b2b"), height=105, corner_radius=10
     )
     self.frame_method.pack(fill="x", padx=30, pady=8)
     self.frame_method.pack_propagate(False)
@@ -164,6 +167,30 @@ class ExcelComparatorApp(App):
     
     if method_names:
       self.option_method.set(method_names[0])
+
+    self.lbl_environment = ctk.CTkLabel(
+        self.frame_method,
+        text="🌐 執行環境：",
+        font=("Microsoft JhengHei", 12),
+        anchor="w",
+    )
+    self.lbl_environment.grid(
+        row=1, column=0, sticky="ew", padx=(20, 10), pady=(0, 15)
+    )
+
+    self.option_environment = ctk.CTkOptionMenu(
+        self.frame_method,
+        values=["SIT", "UAT"],
+        font=("Microsoft JhengHei", 12),
+        width=160,
+    )
+    self.option_environment.grid(
+        row=1, column=1, sticky="e", padx=(0, 20), pady=(0, 15)
+    )
+    current_environment = os.environ.get("EXCEL_COMPARATOR_ENV", "").upper()
+    self.option_environment.set(
+        current_environment if current_environment in {"SIT", "UAT"} else "SIT"
+    )
 
     # --- 操作按鈕 ---
     self.frame_actions = ctk.CTkFrame(self, fg_color="transparent")
@@ -257,6 +284,8 @@ class ExcelComparatorApp(App):
       return
 
     selected_method_name = self.option_method.get()
+    selected_environment = self.option_environment.get()
+    os.environ["EXCEL_COMPARATOR_ENV"] = selected_environment
 
     try:
       # 取得對應的比較函式並統一呼叫介面

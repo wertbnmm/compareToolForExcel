@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 from pathlib import Path
 import pyodbc
@@ -21,14 +22,9 @@ class DatabaseManager:
       )
 
     if getattr(sys, "frozen", False):
-      external_config = Path(sys.executable).parent / config_path_obj
       bundled_root = getattr(sys, "_MEIPASS", None)
-      bundled_config = (
-          Path(bundled_root) / config_path_obj
-          if bundled_root
-          else external_config
-      )
-      config_candidates = (external_config, bundled_config)
+      base_path = Path(bundled_root) if bundled_root else Path(sys.executable).parent
+      config_candidates = (base_path / config_path_obj,)
     else:
       base_path = Path(__file__).resolve().parent.parent.parent.parent
       config_candidates = (base_path / config_path_obj,)
@@ -60,6 +56,14 @@ class DatabaseManager:
         .replace("Encrypt=False", "Encrypt=no")
         .replace("TrustServerCertificate=True", "TrustServerCertificate=yes")
     )
+    for key in ("Encrypt", "TrustServerCertificate", "MultiSubnetFailover"):
+      pyodbc_str = re.sub(
+          rf"(?i)({key}\s*=\s*)False\b", r"\1no", pyodbc_str
+      )
+      pyodbc_str = re.sub(
+          rf"(?i)({key}\s*=\s*)True\b", r"\1yes", pyodbc_str
+      )
+
     if "DRIVER=" not in pyodbc_str.upper():
       pyodbc_str = "DRIVER={ODBC Driver 17 for SQL Server};" + pyodbc_str
     return pyodbc_str
