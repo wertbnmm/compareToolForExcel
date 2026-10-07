@@ -1,26 +1,38 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import glob
+
+
+comparison_modules = [
+    f"excel_comparator.comparisons.{os.path.basename(path)[:-3]}"
+    for path in glob.glob(
+        os.path.join("src", "excel_comparator", "comparisons", "*.py")
+    )
+    if not os.path.basename(path).startswith("__")
+]
+comparison_datas = [
+    (path, os.path.join("excel_comparator", "comparisons"))
+    for path in glob.glob(
+        os.path.join("src", "excel_comparator", "comparisons", "*.py")
+    )
+]
+
 
 a = Analysis(
-    ['main.py'],
-    pathex=[os.path.abspath('.')],
+    ['src/excel_comparator/main.py'],
+    pathex=[os.path.abspath('src')],
     binaries=[],
     datas=[
-        ('compare', 'compare'),     # 把 compare 資料夾完整帶入
-    ],
+        ('config', 'config'),
+    ] + comparison_datas,
     hiddenimports=[
         # 將你根目錄的所有核心 py 模組全部宣告進來
-        'company_helper',
-        'comparelist',
-        'resultExport',
-        'utils',
-        # 將 compare 資料夾及其內部的比對模組宣告進來
-        'compare',
-        'compare.SAP625_SAN070R1',
-        'compare.SAP162_SAN080R1',
+        'excel_comparator',
+        'excel_comparator.application.comparison_registry',
         # 確保 GUI 拖放外掛正常運作
         'tkinterdnd2',
-    ],
+    ] + comparison_modules,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

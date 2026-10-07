@@ -1,0 +1,7 @@
+pandas
+openpyxl
+xlrd
+pyodbc
+customtkinter
+tkinterdnd2
+pyinstaller

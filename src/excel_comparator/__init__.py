@@ -1,0 +1,1 @@
+"""Excel comparator application package."""
